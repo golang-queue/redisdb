@@ -2,6 +2,8 @@ package redisdb
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,7 +22,7 @@ type Option func(*Worker)
 type Worker struct {
 	// redis config
 	rdb              *redis.Client
-	pubsub           *redis.Pubsub
+	pubsub           *redis.PubSub
 	addr             string
 	db               int
 	connectionString string
@@ -229,14 +231,8 @@ func (s *Worker) Queue(job queue.QueuedMessage) error {
 
 	ctx := context.Background()
 
-	// Wait for confirmation that subscription is created before publishing anything.
-	_, err := s.pubsub.Receive(ctx)
-	if err != nil {
-		return err
-	}
-
 	// Publish a message.
-	err = s.rdb.Publish(ctx, s.channel, job).Err()
+	err := s.rdb.Publish(ctx, s.channel, job.Bytes()).Err()
 	if err != nil {
 		return err
 	}
@@ -253,5 +249,37 @@ func (s *Worker) Run() error {
 	default:
 	}
 
-	return nil
+	var options []redis.ChannelOption
+	ctx := context.Background()
+
+	if s.channelSize > 1 {
+		options = append(options, redis.WithChannelSize(s.channelSize))
+	}
+
+	ch := s.pubsub.Channel(options...)
+	// make sure the connection is successful
+	err := s.pubsub.Ping(ctx)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case m, ok := <-ch:
+			if !ok {
+				return fmt.Errorf("redis pubsub: channel=%s closed", s.channel)
+			}
+
+			var data queue.Job
+			if err := json.Unmarshal([]byte(m.Payload), &data); err != nil {
+				s.logger.Error("json unmarshal error: ", err)
+				continue
+			}
+			if err := s.handle(data); err != nil {
+				s.logger.Error("handle job error: ", err)
+			}
+		case <-s.stop:
+			return nil
+		}
+	}
 }
