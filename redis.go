@@ -265,6 +265,12 @@ func (s *Worker) Run() error {
 	for {
 		select {
 		case m, ok := <-ch:
+			select {
+			case <-s.stop:
+				return nil
+			default:
+			}
+
 			if !ok {
 				return fmt.Errorf("redis pubsub: channel=%s closed", s.channel)
 			}
