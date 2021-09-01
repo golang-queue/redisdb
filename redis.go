@@ -20,6 +20,7 @@ type Option func(*Worker)
 type Worker struct {
 	// redis config
 	rdb              *redis.Client
+	pubsub           *redis.Pubsub
 	addr             string
 	db               int
 	connectionString string
@@ -95,10 +96,11 @@ func WithLogger(l queue.Logger) Option {
 func NewWorker(opts ...Option) *Worker {
 	var err error
 	w := &Worker{
-		addr:    "127.0.0.1:6379",
-		channel: "queue",
-		stop:    make(chan struct{}),
-		logger:  queue.NewLogger(),
+		addr:        "127.0.0.1:6379",
+		channel:     "queue",
+		channelSize: 1024,
+		stop:        make(chan struct{}),
+		logger:      queue.NewLogger(),
 		runFunc: func(context.Context, queue.QueuedMessage) error {
 			return nil
 		},
@@ -133,6 +135,9 @@ func NewWorker(opts ...Option) *Worker {
 	}
 
 	w.rdb = rdb
+
+	ctx := context.Background()
+	w.pubsub = w.rdb.Subscribe(ctx, w.channel)
 
 	return w
 }
@@ -199,6 +204,7 @@ func (s *Worker) Shutdown() error {
 	}
 
 	s.stopOnce.Do(func() {
+		s.pubsub.Close()
 		s.rdb.Close()
 		close(s.stop)
 	})
@@ -219,6 +225,20 @@ func (s *Worker) Usage() int {
 func (s *Worker) Queue(job queue.QueuedMessage) error {
 	if atomic.LoadInt32(&s.stopFlag) == 1 {
 		return queue.ErrQueueShutdown
+	}
+
+	ctx := context.Background()
+
+	// Wait for confirmation that subscription is created before publishing anything.
+	_, err := s.pubsub.Receive(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Publish a message.
+	err = s.rdb.Publish(ctx, s.channel, job).Err()
+	if err != nil {
+		return err
 	}
 
 	return nil
