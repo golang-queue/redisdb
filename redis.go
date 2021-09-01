@@ -205,9 +205,9 @@ func (s *Worker) Shutdown() error {
 	}
 
 	s.stopOnce.Do(func() {
+		close(s.stop)
 		s.pubsub.Close()
 		s.rdb.Close()
-		close(s.stop)
 	})
 	return nil
 }
