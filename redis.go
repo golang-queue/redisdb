@@ -37,7 +37,7 @@ type Worker struct {
 	stopFlag int32
 }
 
-// WithAddr setup the addr of NSQ
+// WithAddr setup the addr of redis
 func WithAddr(addr string) Option {
 	return func(w *Worker) {
 		w.addr = addr
@@ -51,7 +51,7 @@ func WithDB(db int) Option {
 	}
 }
 
-// WithChannelSize redis password
+// WithChannelSize redis channel size
 func WithChannelSize(size int) Option {
 	return func(w *Worker) {
 		w.channelSize = size
@@ -65,14 +65,14 @@ func WithPassword(passwd string) Option {
 	}
 }
 
-// WithPassword redis password
+// WithConnectionString redis connection string
 func WithConnectionString(connectionString string) Option {
 	return func(w *Worker) {
 		w.connectionString = connectionString
 	}
 }
 
-// WithChannel setup the channel of NSQ
+// WithChannel setup the channel of redis
 func WithChannel(channel string) Option {
 	return func(w *Worker) {
 		w.channel = channel
