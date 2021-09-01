@@ -30,12 +30,11 @@ type Worker struct {
 	channel          string
 	channelSize      int
 
-	stopOnce  sync.Once
-	stop      chan struct{}
-	runFunc   func(context.Context, queue.QueuedMessage) error
-	logger    queue.Logger
-	stopFlag  int32
-	startFlag int32
+	stopOnce sync.Once
+	stop     chan struct{}
+	runFunc  func(context.Context, queue.QueuedMessage) error
+	logger   queue.Logger
+	stopFlag int32
 }
 
 // WithAddr setup the addr of NSQ
