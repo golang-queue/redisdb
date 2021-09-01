@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/golang-queue/queue"
 
@@ -23,11 +24,11 @@ type Worker struct {
 	db               int
 	connectionString string
 	password         string
+	channel          string
+	channelSize      int
 
-	startOnce sync.Once
 	stopOnce  sync.Once
 	stop      chan struct{}
-	channel   string
 	runFunc   func(context.Context, queue.QueuedMessage) error
 	logger    queue.Logger
 	stopFlag  int32
@@ -45,6 +46,13 @@ func WithAddr(addr string) Option {
 func WithDB(db int) Option {
 	return func(w *Worker) {
 		w.db = db
+	}
+}
+
+// WithChannelSize redis password
+func WithChannelSize(size int) Option {
+	return func(w *Worker) {
+		w.channelSize = size
 	}
 }
 
@@ -140,7 +148,48 @@ func (s *Worker) AfterRun() error {
 }
 
 func (s *Worker) handle(job queue.Job) error {
-	return nil
+	// create channel with buffer size 1 to avoid goroutine leak
+	done := make(chan error, 1)
+	panicChan := make(chan interface{}, 1)
+	startTime := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), job.Timeout)
+	defer cancel()
+
+	// run the job
+	go func() {
+		// handle panic issue
+		defer func() {
+			if p := recover(); p != nil {
+				panicChan <- p
+			}
+		}()
+
+		// run custom process function
+		done <- s.runFunc(ctx, job)
+	}()
+
+	select {
+	case p := <-panicChan:
+		panic(p)
+	case <-ctx.Done(): // timeout reached
+		return ctx.Err()
+	case <-s.stop: // shutdown service
+		// cancel job
+		cancel()
+
+		leftTime := job.Timeout - time.Since(startTime)
+		// wait job
+		select {
+		case <-time.After(leftTime):
+			return context.DeadlineExceeded
+		case err := <-done: // job finish
+			return err
+		case p := <-panicChan:
+			panic(p)
+		}
+	case err := <-done: // job finish
+		return err
+	}
 }
 
 // Shutdown worker
@@ -150,10 +199,7 @@ func (s *Worker) Shutdown() error {
 	}
 
 	s.stopOnce.Do(func() {
-		if atomic.LoadInt32(&s.startFlag) == 1 {
-			s.rdb.Close()
-		}
-
+		s.rdb.Close()
 		close(s.stop)
 	})
 	return nil
@@ -180,5 +226,12 @@ func (s *Worker) Queue(job queue.QueuedMessage) error {
 
 // Run start the worker
 func (s *Worker) Run() error {
+	// check queue status
+	select {
+	case <-s.stop:
+		return queue.ErrQueueShutdown
+	default:
+	}
+
 	return nil
 }
