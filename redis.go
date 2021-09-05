@@ -205,9 +205,9 @@ func (s *Worker) Shutdown() error {
 	}
 
 	s.stopOnce.Do(func() {
-		close(s.stop)
 		s.pubsub.Close()
 		s.rdb.Close()
+		close(s.stop)
 	})
 	return nil
 }
@@ -244,7 +244,7 @@ func (s *Worker) Run() error {
 	// check queue status
 	select {
 	case <-s.stop:
-		return queue.ErrQueueShutdown
+		return nil
 	default:
 	}
 
@@ -263,6 +263,13 @@ func (s *Worker) Run() error {
 	}
 
 	for {
+		// check queue status
+		select {
+		case <-s.stop:
+			return nil
+		default:
+		}
+
 		select {
 		case m, ok := <-ch:
 			select {
