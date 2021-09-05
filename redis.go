@@ -22,11 +22,12 @@ type Worker struct {
 	// redis config
 	rdb              *redis.Client
 	pubsub           *redis.PubSub
+	channel          <-chan *redis.Message
 	addr             string
 	db               int
 	connectionString string
 	password         string
-	channel          string
+	channelName      string
 	channelSize      int
 
 	stopOnce    sync.Once
@@ -75,7 +76,7 @@ func WithConnectionString(connectionString string) Option {
 // WithChannel setup the channel of redis
 func WithChannel(channel string) Option {
 	return func(w *Worker) {
-		w.channel = channel
+		w.channelName = channel
 	}
 }
 
@@ -98,7 +99,7 @@ func NewWorker(opts ...Option) *Worker {
 	var err error
 	w := &Worker{
 		addr:        "127.0.0.1:6379",
-		channel:     "queue",
+		channelName: "queue",
 		channelSize: 1024,
 		stop:        make(chan struct{}),
 		logger:      queue.NewLogger(),
@@ -138,7 +139,19 @@ func NewWorker(opts ...Option) *Worker {
 	w.rdb = rdb
 
 	ctx := context.Background()
-	w.pubsub = w.rdb.Subscribe(ctx, w.channel)
+	w.pubsub = w.rdb.Subscribe(ctx, w.channelName)
+
+	var ropts []redis.ChannelOption
+
+	if w.channelSize > 1 {
+		ropts = append(ropts, redis.WithChannelSize(w.channelSize))
+	}
+
+	w.channel = w.pubsub.Channel(ropts...)
+	// make sure the connection is successful
+	if err := w.pubsub.Ping(ctx); err != nil {
+		w.logger.Fatal(err)
+	}
 
 	return w
 }
@@ -247,7 +260,7 @@ func (w *Worker) Queue(job queue.QueuedMessage) error {
 	ctx := context.Background()
 
 	// Publish a message.
-	err := w.rdb.Publish(ctx, w.channel, job.Bytes()).Err()
+	err := w.rdb.Publish(ctx, w.channelName, job.Bytes()).Err()
 	if err != nil {
 		return err
 	}
@@ -257,27 +270,6 @@ func (w *Worker) Queue(job queue.QueuedMessage) error {
 
 // Run start the worker
 func (w *Worker) Run() error {
-	// check queue status
-	select {
-	case <-w.stop:
-		return nil
-	default:
-	}
-
-	var options []redis.ChannelOption
-	ctx := context.Background()
-
-	if w.channelSize > 1 {
-		options = append(options, redis.WithChannelSize(w.channelSize))
-	}
-
-	ch := w.pubsub.Channel(options...)
-	// make sure the connection is successful
-	err := w.pubsub.Ping(ctx)
-	if err != nil {
-		return err
-	}
-
 	for {
 		// check queue status
 		select {
@@ -287,7 +279,7 @@ func (w *Worker) Run() error {
 		}
 
 		select {
-		case m, ok := <-ch:
+		case m, ok := <-w.channel:
 			select {
 			case <-w.stop:
 				return nil
@@ -295,7 +287,7 @@ func (w *Worker) Run() error {
 			}
 
 			if !ok {
-				return fmt.Errorf("redis pubsub: channel=%s closed", w.channel)
+				return fmt.Errorf("redis pubsub: channel=%s closed", w.channelName)
 			}
 
 			var data queue.Job
