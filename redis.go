@@ -8,9 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang-queue/queue"
-
 	"github.com/go-redis/redis/v8"
+	"github.com/golang-queue/queue"
 )
 
 var _ queue.Worker = (*Worker)(nil)
@@ -30,11 +29,12 @@ type Worker struct {
 	channel          string
 	channelSize      int
 
-	stopOnce sync.Once
-	stop     chan struct{}
-	runFunc  func(context.Context, queue.QueuedMessage) error
-	logger   queue.Logger
-	stopFlag int32
+	stopOnce    sync.Once
+	stop        chan struct{}
+	runFunc     func(context.Context, queue.QueuedMessage) error
+	logger      queue.Logger
+	stopFlag    int32
+	busyWorkers uint64
 }
 
 // WithAddr setup the addr of redis
@@ -143,23 +143,39 @@ func NewWorker(opts ...Option) *Worker {
 	return w
 }
 
+func (w *Worker) incBusyWorker() {
+	atomic.AddUint64(&w.busyWorkers, 1)
+}
+
+func (w *Worker) decBusyWorker() {
+	atomic.AddUint64(&w.busyWorkers, ^uint64(0))
+}
+
+func (w *Worker) BusyWorkers() uint64 {
+	return atomic.LoadUint64(&w.busyWorkers)
+}
+
 // BeforeRun run script before start worker
-func (s *Worker) BeforeRun() error {
+func (w *Worker) BeforeRun() error {
 	return nil
 }
 
 // AfterRun run script after start worker
-func (s *Worker) AfterRun() error {
+func (w *Worker) AfterRun() error {
 	return nil
 }
 
-func (s *Worker) handle(job queue.Job) error {
+func (w *Worker) handle(job queue.Job) error {
 	// create channel with buffer size 1 to avoid goroutine leak
 	done := make(chan error, 1)
 	panicChan := make(chan interface{}, 1)
 	startTime := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), job.Timeout)
-	defer cancel()
+	w.incBusyWorker()
+	defer func() {
+		cancel()
+		w.decBusyWorker()
+	}()
 
 	// run the job
 	go func() {
@@ -171,7 +187,7 @@ func (s *Worker) handle(job queue.Job) error {
 		}()
 
 		// run custom process function
-		done <- s.runFunc(ctx, job)
+		done <- w.runFunc(ctx, job)
 	}()
 
 	select {
@@ -179,7 +195,7 @@ func (s *Worker) handle(job queue.Job) error {
 		panic(p)
 	case <-ctx.Done(): // timeout reached
 		return ctx.Err()
-	case <-s.stop: // shutdown service
+	case <-w.stop: // shutdown service
 		// cancel job
 		cancel()
 
@@ -199,39 +215,39 @@ func (s *Worker) handle(job queue.Job) error {
 }
 
 // Shutdown worker
-func (s *Worker) Shutdown() error {
-	if !atomic.CompareAndSwapInt32(&s.stopFlag, 0, 1) {
+func (w *Worker) Shutdown() error {
+	if !atomic.CompareAndSwapInt32(&w.stopFlag, 0, 1) {
 		return queue.ErrQueueShutdown
 	}
 
-	s.stopOnce.Do(func() {
-		s.pubsub.Close()
-		s.rdb.Close()
-		close(s.stop)
+	w.stopOnce.Do(func() {
+		w.pubsub.Close()
+		w.rdb.Close()
+		close(w.stop)
 	})
 	return nil
 }
 
 // Capacity for channel
-func (s *Worker) Capacity() int {
+func (w *Worker) Capacity() int {
 	return 0
 }
 
 // Usage for count of channel usage
-func (s *Worker) Usage() int {
+func (w *Worker) Usage() int {
 	return 0
 }
 
 // Queue send notification to queue
-func (s *Worker) Queue(job queue.QueuedMessage) error {
-	if atomic.LoadInt32(&s.stopFlag) == 1 {
+func (w *Worker) Queue(job queue.QueuedMessage) error {
+	if atomic.LoadInt32(&w.stopFlag) == 1 {
 		return queue.ErrQueueShutdown
 	}
 
 	ctx := context.Background()
 
 	// Publish a message.
-	err := s.rdb.Publish(ctx, s.channel, job.Bytes()).Err()
+	err := w.rdb.Publish(ctx, w.channel, job.Bytes()).Err()
 	if err != nil {
 		return err
 	}
@@ -240,10 +256,10 @@ func (s *Worker) Queue(job queue.QueuedMessage) error {
 }
 
 // Run start the worker
-func (s *Worker) Run() error {
+func (w *Worker) Run() error {
 	// check queue status
 	select {
-	case <-s.stop:
+	case <-w.stop:
 		return nil
 	default:
 	}
@@ -251,13 +267,13 @@ func (s *Worker) Run() error {
 	var options []redis.ChannelOption
 	ctx := context.Background()
 
-	if s.channelSize > 1 {
-		options = append(options, redis.WithChannelSize(s.channelSize))
+	if w.channelSize > 1 {
+		options = append(options, redis.WithChannelSize(w.channelSize))
 	}
 
-	ch := s.pubsub.Channel(options...)
+	ch := w.pubsub.Channel(options...)
 	// make sure the connection is successful
-	err := s.pubsub.Ping(ctx)
+	err := w.pubsub.Ping(ctx)
 	if err != nil {
 		return err
 	}
@@ -265,7 +281,7 @@ func (s *Worker) Run() error {
 	for {
 		// check queue status
 		select {
-		case <-s.stop:
+		case <-w.stop:
 			return nil
 		default:
 		}
@@ -273,24 +289,24 @@ func (s *Worker) Run() error {
 		select {
 		case m, ok := <-ch:
 			select {
-			case <-s.stop:
+			case <-w.stop:
 				return nil
 			default:
 			}
 
 			if !ok {
-				return fmt.Errorf("redis pubsub: channel=%s closed", s.channel)
+				return fmt.Errorf("redis pubsub: channel=%s closed", w.channel)
 			}
 
 			var data queue.Job
 			if err := json.Unmarshal([]byte(m.Payload), &data); err != nil {
-				s.logger.Error("json unmarshal error: ", err)
+				w.logger.Error("json unmarshal error: ", err)
 				continue
 			}
-			if err := s.handle(data); err != nil {
-				s.logger.Error("handle job error: ", err)
+			if err := w.handle(data); err != nil {
+				w.logger.Error("handle job error: ", err)
 			}
-		case <-s.stop:
+		case <-w.stop:
 			return nil
 		}
 	}
