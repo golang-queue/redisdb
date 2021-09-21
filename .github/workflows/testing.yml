@@ -26,6 +26,10 @@ jobs:
       GO111MODULE: on
       GOPROXY: https://proxy.golang.org
     steps:
+      - uses: vishnudxb/redis-cluster@1.0.5
+        with:
+          master1-port: 6379
+          slave1-port: 6380
       - name: Set up Go ${{ matrix.go }}
         uses: actions/setup-go@v2
 
