@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,7 +21,7 @@ type Option func(*Worker)
 // Worker for Redis
 type Worker struct {
 	// redis config
-	rdb              *redis.Client
+	rdb              redis.Cmdable
 	pubsub           *redis.PubSub
 	channel          <-chan *redis.Message
 	addr             string
@@ -29,6 +30,7 @@ type Worker struct {
 	password         string
 	channelName      string
 	channelSize      int
+	cluster          bool
 
 	stopOnce    sync.Once
 	stop        chan struct{}
@@ -49,6 +51,13 @@ func WithAddr(addr string) Option {
 func WithDB(db int) Option {
 	return func(w *Worker) {
 		w.db = db
+	}
+}
+
+// WithCluster redis cluster
+func WithCluster(enable bool) Option {
+	return func(w *Worker) {
+		w.cluster = enable
 	}
 }
 
@@ -114,32 +123,41 @@ func NewWorker(opts ...Option) *Worker {
 		opt(w)
 	}
 
-	var options *redis.Options
-
 	if w.connectionString != "" {
-		options, err = redis.ParseURL(w.connectionString)
+		options, err := redis.ParseURL(w.connectionString)
 		if err != nil {
 			w.logger.Fatal(err)
 		}
+		w.rdb = redis.NewClient(options)
 	} else if w.addr != "" {
-		options = &redis.Options{
-			Addr:     w.addr,
-			Password: w.password,
-			DB:       w.db,
+		if w.cluster {
+			w.rdb = redis.NewClusterClient(&redis.ClusterOptions{
+				Addrs:    strings.Split(w.addr, ","),
+				Password: w.password,
+			})
+		} else {
+			options := &redis.Options{
+				Addr:     w.addr,
+				Password: w.password,
+				DB:       w.db,
+			}
+			w.rdb = redis.NewClient(options)
 		}
 	}
 
-	rdb := redis.NewClient(options)
-
-	_, err = rdb.Ping(context.Background()).Result()
+	_, err = w.rdb.Ping(context.Background()).Result()
 	if err != nil {
 		w.logger.Fatal(err)
 	}
 
-	w.rdb = rdb
-
 	ctx := context.Background()
-	w.pubsub = w.rdb.Subscribe(ctx, w.channelName)
+
+	switch v := w.rdb.(type) {
+	case *redis.Client:
+		w.pubsub = v.Subscribe(ctx, w.channelName)
+	case *redis.ClusterClient:
+		w.pubsub = v.Subscribe(ctx, w.channelName)
+	}
 
 	var ropts []redis.ChannelOption
 
@@ -235,7 +253,12 @@ func (w *Worker) Shutdown() error {
 
 	w.stopOnce.Do(func() {
 		w.pubsub.Close()
-		w.rdb.Close()
+		switch v := w.rdb.(type) {
+		case *redis.Client:
+			v.Close()
+		case *redis.ClusterClient:
+			v.Close()
+		}
 		close(w.stop)
 	})
 	return nil

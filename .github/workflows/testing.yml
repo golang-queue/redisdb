@@ -7,25 +7,15 @@ jobs:
     # You must use a Linux environment when using service containers or container jobs
     runs-on: ubuntu-latest
 
-    # Service containers to run with `container-job`
-    services:
-      # Label used to access the service container
-      redis:
-        # Docker Hub image
-        image: redis
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-
     env:
       GO111MODULE: on
       GOPROXY: https://proxy.golang.org
     steps:
+      - uses: vishnudxb/redis-cluster@1.0.5
+        with:
+          master1-port: 6379
+          slave1-port: 6380
+
       - name: Set up Go ${{ matrix.go }}
         uses: actions/setup-go@v2
 
