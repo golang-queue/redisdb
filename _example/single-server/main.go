@@ -45,23 +45,19 @@ func main() {
 	)
 
 	// define the queue
-	q, err := queue.NewQueue(
-		queue.WithWorkerCount(10),
+	q := queue.NewPool(
+		5,
 		queue.WithWorker(w),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// start the five worker
-	q.Start()
 
 	// assign tasks in queue
 	for i := 0; i < taskN; i++ {
 		go func(i int) {
-			q.Queue(&job{
+			if err := q.Queue(&job{
 				Message: fmt.Sprintf("handle the job: %d", i+1),
-			})
+			}); err != nil {
+				log.Fatal(err)
+			}
 		}(i)
 	}
 
@@ -72,7 +68,5 @@ func main() {
 	}
 
 	// shutdown the service and notify all the worker
-	q.Shutdown()
-	// wait all jobs are complete.
-	q.Wait()
+	q.Release()
 }
