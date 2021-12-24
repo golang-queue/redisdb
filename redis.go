@@ -116,6 +116,13 @@ func WithLogger(l queue.Logger) Option {
 	}
 }
 
+// WithMetric set custom Metric
+func WithMetric(m queue.Metric) Option {
+	return func(w *Worker) {
+		w.metric = m
+	}
+}
+
 // NewWorker for struc
 func NewWorker(opts ...Option) *Worker {
 	var err error
@@ -128,6 +135,7 @@ func NewWorker(opts ...Option) *Worker {
 		runFunc: func(context.Context, queue.QueuedMessage) error {
 			return nil
 		},
+		metric: queue.NewMetric(),
 	}
 
 	// Loop through each option
