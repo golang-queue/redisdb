@@ -32,12 +32,25 @@ type Worker struct {
 	channelSize      int
 	cluster          bool
 
-	stopOnce    sync.Once
-	stop        chan struct{}
-	runFunc     func(context.Context, queue.QueuedMessage) error
-	logger      queue.Logger
-	stopFlag    int32
-	busyWorkers uint64
+	stopOnce sync.Once
+	stop     chan struct{}
+	runFunc  func(context.Context, queue.QueuedMessage) error
+	logger   queue.Logger
+	stopFlag int32
+	metric   queue.Metric
+}
+
+func (w *Worker) incBusyWorker() {
+	w.metric.IncBusyWorker()
+}
+
+func (w *Worker) decBusyWorker() {
+	w.metric.DecBusyWorker()
+}
+
+// BusyWorkers return count of busy workers currently.
+func (w *Worker) BusyWorkers() uint64 {
+	return w.metric.BusyWorkers()
 }
 
 // WithAddr setup the addr of redis
@@ -172,18 +185,6 @@ func NewWorker(opts ...Option) *Worker {
 	}
 
 	return w
-}
-
-func (w *Worker) incBusyWorker() {
-	atomic.AddUint64(&w.busyWorkers, 1)
-}
-
-func (w *Worker) decBusyWorker() {
-	atomic.AddUint64(&w.busyWorkers, ^uint64(0))
-}
-
-func (w *Worker) BusyWorkers() uint64 {
-	return atomic.LoadUint64(&w.busyWorkers)
 }
 
 // BeforeRun run script before start worker
