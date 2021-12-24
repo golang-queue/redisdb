@@ -11,8 +11,6 @@ github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4
 github.com/go-redis/redis/v8 v8.11.3 h1:GCjoYp8c+yQTJfc0n69iwSiHjvuAdruxl7elnZCxgt8=
 github.com/go-redis/redis/v8 v8.11.3/go.mod h1:xNJ9xDG09FsIPwh3bWdk+0oDWHbtF9rPN0F/oD9XeKc=
 github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg7847qk6SyHyPtNmDHnmrv/HOrqktSC+C9fM+CJOE=
-github.com/golang-queue/queue v0.0.10 h1:cGqMgHMf2eamwdd3hmOzGcSQogGu9tMhhVYPQMrMC1g=
-github.com/golang-queue/queue v0.0.10/go.mod h1:ku8iyjYffqYY6Duts+xl+QYfN3/KDK4MEvXMZUkHyio=
 github.com/golang-queue/queue v0.0.11 h1:qaE7rOYUh+11NcO6U9zZ7NazglIwEp0j7Dn0sSoavcI=
 github.com/golang-queue/queue v0.0.11/go.mod h1:ku8iyjYffqYY6Duts+xl+QYfN3/KDK4MEvXMZUkHyio=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
