@@ -1,7 +1,8 @@
 # redis
 
 [![Run Testing](https://github.com/golang-queue/redisdb/actions/workflows/go.yml/badge.svg)](https://github.com/golang-queue/redisdb/actions/workflows/go.yml)
-[![codecov](https://codecov.io/gh/golang-queue/redisdb/branch/main/graph/badge.svg?token=D3CUES8M62)](https://codecov.io/gh/golang-queue/redisdb)
+[![codecov](https://codecov.io/gh/golang-queue/redisdb/branch/main/graph/badge.svg?token=FFZN8E2ZZB)](https://codecov.io/gh/golang-queue/redisdb)
+[![Go Report Card](https://goreportcard.com/badge/github.com/golang-queue/redisdb)](https://goreportcard.com/report/github.com/golang-queue/redisdb)
 
 Redis as backend for [Queue package](https://github.com/golang-queue/queue)
 
