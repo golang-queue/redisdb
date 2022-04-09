@@ -11,9 +11,10 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-queue/queue"
+	"github.com/golang-queue/queue/core"
 )
 
-var _ queue.Worker = (*Worker)(nil)
+var _ core.Worker = (*Worker)(nil)
 
 // Worker for Redis
 type Worker struct {
@@ -84,16 +85,6 @@ func NewWorker(opts ...Option) *Worker {
 	}
 
 	return w
-}
-
-// BeforeRun run script before start worker
-func (w *Worker) BeforeRun() error {
-	return nil
-}
-
-// AfterRun run script after start worker
-func (w *Worker) AfterRun() error {
-	return nil
 }
 
 func (w *Worker) handle(job queue.Job) error {
@@ -173,7 +164,7 @@ func (w *Worker) Usage() int {
 }
 
 // Queue send notification to queue
-func (w *Worker) Queue(job queue.QueuedMessage) error {
+func (w *Worker) Queue(job core.QueuedMessage) error {
 	if atomic.LoadInt32(&w.stopFlag) == 1 {
 		return queue.ErrQueueShutdown
 	}
@@ -190,7 +181,7 @@ func (w *Worker) Queue(job queue.QueuedMessage) error {
 }
 
 // Run start the worker
-func (w *Worker) Run(task queue.QueuedMessage) error {
+func (w *Worker) Run(task core.QueuedMessage) error {
 	for {
 		// check queue status
 		select {
@@ -226,6 +217,6 @@ func (w *Worker) Run(task queue.QueuedMessage) error {
 }
 
 // Request a new task
-func (w *Worker) Request() (queue.QueuedMessage, error) {
+func (w *Worker) Request() (core.QueuedMessage, error) {
 	return nil, queue.ErrNoTaskInQueue
 }
