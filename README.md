@@ -20,9 +20,9 @@ start the redis cluster, see the [config](./conf/redis.conf)
 
 ```sh
 # server 01
-mkdir server01 && cd server 01 && redis-server redis.conf --port 6379
+mkdir server01 && cd server01 && redis-server redis.conf --port 6379
 # server 02
-mkdir server02 && cd server 02 && redis-server redis.conf --port 6380
+mkdir server02 && cd server02 && redis-server redis.conf --port 6380
 ```
 
 ## Example

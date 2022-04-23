@@ -260,13 +260,12 @@ func TestGoroutineLeak(t *testing.T) {
 	assert.NoError(t, err)
 	q.Start()
 	time.Sleep(50 * time.Millisecond)
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 50; i++ {
 		m.Message = fmt.Sprintf("foobar: %d", i+1)
 		assert.NoError(t, q.Queue(m))
 	}
 	time.Sleep(1 * time.Second)
-	q.Shutdown()
-	q.Wait()
+	q.Release()
 	time.Sleep(1 * time.Second)
 	fmt.Println("number of goroutines:", runtime.NumGoroutine())
 }
