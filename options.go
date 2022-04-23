@@ -89,7 +89,8 @@ func newOptions(opts ...Option) options {
 	defaultOpts := options{
 		addr:        "127.0.0.1:6379",
 		channelName: "queue",
-		channelSize: 1024,
+		// default channel size in go-redis package
+		channelSize: 100,
 		logger:      queue.NewLogger(),
 		runFunc: func(context.Context, core.QueuedMessage) error {
 			return nil
