@@ -53,7 +53,7 @@ func TestRedisDefaultFlow(t *testing.T) {
 	q.Wait()
 }
 
-func TestNSQShutdown(t *testing.T) {
+func TestRedisShutdown(t *testing.T) {
 	w := NewWorker(
 		WithAddr(host+":6379"),
 		WithChannel("test2"),
