@@ -86,7 +86,7 @@ func NewWorker(opts ...Option) *Worker {
 	return w
 }
 
-func (w *Worker) handle(job queue.Job) error {
+func (w *Worker) handle(job *queue.Job) error {
 	// create channel with buffer size 1 to avoid goroutine leak
 	done := make(chan error, 1)
 	panicChan := make(chan interface{}, 1)
@@ -171,7 +171,7 @@ func (w *Worker) Queue(job core.QueuedMessage) error {
 
 // Run start the worker
 func (w *Worker) Run(task core.QueuedMessage) error {
-	data, _ := task.(queue.Job)
+	data, _ := task.(*queue.Job)
 
 	if err := w.handle(data); err != nil {
 		return err
@@ -192,7 +192,7 @@ loop:
 			}
 			var data queue.Job
 			_ = json.Unmarshal([]byte(task.Payload), &data)
-			return data, nil
+			return &data, nil
 		case <-time.After(1 * time.Second):
 			if clock == 5 {
 				break loop
