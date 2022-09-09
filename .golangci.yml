@@ -3,7 +3,6 @@ linters:
   disable-all: true
   fast: false
   enable:
-    - bodyclose
     - deadcode
     - depguard
     - dogsled
@@ -25,15 +24,11 @@ linters:
     - lll
     - misspell
     - nakedret
-    - noctx
     - nolintlint
-    - rowserrcheck
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
-    - unparam
     - unused
     - varcheck
     - whitespace
