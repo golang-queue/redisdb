@@ -11,6 +11,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-queue/queue"
 	"github.com/golang-queue/queue/core"
+	"github.com/golang-queue/queue/job"
 )
 
 var _ core.Worker = (*Worker)(nil)
@@ -86,51 +87,9 @@ func NewWorker(opts ...Option) *Worker {
 	return w
 }
 
-func (w *Worker) handle(job *queue.Job) error {
-	// create channel with buffer size 1 to avoid goroutine leak
-	done := make(chan error, 1)
-	panicChan := make(chan interface{}, 1)
-	startTime := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), job.Timeout)
-	defer func() {
-		cancel()
-	}()
-
-	// run the job
-	go func() {
-		// handle panic issue
-		defer func() {
-			if p := recover(); p != nil {
-				panicChan <- p
-			}
-		}()
-
-		// run custom process function
-		done <- w.opts.runFunc(ctx, job)
-	}()
-
-	select {
-	case p := <-panicChan:
-		panic(p)
-	case <-ctx.Done(): // timeout reached
-		return ctx.Err()
-	case <-w.stop: // shutdown service
-		// cancel job
-		cancel()
-
-		leftTime := job.Timeout - time.Since(startTime)
-		// wait job
-		select {
-		case <-time.After(leftTime):
-			return context.DeadlineExceeded
-		case err := <-done: // job finish
-			return err
-		case p := <-panicChan:
-			panic(p)
-		}
-	case err := <-done: // job finish
-		return err
-	}
+// Run to execute new task
+func (w *Worker) Run(ctx context.Context, task core.QueuedMessage) error {
+	return w.opts.runFunc(ctx, task)
 }
 
 // Shutdown worker
@@ -169,17 +128,6 @@ func (w *Worker) Queue(job core.QueuedMessage) error {
 	return nil
 }
 
-// Run start the worker
-func (w *Worker) Run(task core.QueuedMessage) error {
-	data, _ := task.(*queue.Job)
-
-	if err := w.handle(data); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Request a new task
 func (w *Worker) Request() (core.QueuedMessage, error) {
 	clock := 0
@@ -190,7 +138,7 @@ loop:
 			if !ok {
 				return nil, queue.ErrQueueHasBeenClosed
 			}
-			var data queue.Job
+			var data job.Message
 			_ = json.Unmarshal([]byte(task.Payload), &data)
 			return &data, nil
 		case <-time.After(1 * time.Second):
