@@ -20,6 +20,8 @@ type options struct {
 	channelName      string
 	channelSize      int
 	cluster          bool
+	sentinel         bool
+	masterName       string
 }
 
 // WithAddr setup the addr of redis
@@ -40,6 +42,20 @@ func WithDB(db int) Option {
 func WithCluster(enable bool) Option {
 	return func(w *options) {
 		w.cluster = enable
+	}
+}
+
+// WithSentinel redis sentinel
+func WithSentinel(enable bool) Option {
+	return func(w *options) {
+		w.sentinel = enable
+	}
+}
+
+// WithMasterName sentinel master name
+func WithMasterName(masterName string) Option {
+	return func(w *options) {
+		w.masterName = masterName
 	}
 }
 

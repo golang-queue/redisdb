@@ -49,6 +49,13 @@ func NewWorker(opts ...Option) *Worker {
 				Addrs:    strings.Split(w.opts.addr, ","),
 				Password: w.opts.password,
 			})
+		} else if w.opts.sentinel {
+			w.rdb = redis.NewFailoverClient(&redis.FailoverOptions{
+				MasterName:    w.opts.masterName,
+				SentinelAddrs: strings.Split(w.opts.addr, ","),
+				Password:      w.opts.password,
+				DB:            w.opts.db,
+			})
 		} else {
 			options := &redis.Options{
 				Addr:     w.opts.addr,
