@@ -130,6 +130,37 @@ func TestRedisCluster(t *testing.T) {
 	// you will see the execute time > 1000ms
 }
 
+func TestRedisSentinel(t *testing.T) {
+	t.Helper()
+	m := &mockMessage{
+		Message: "foo",
+	}
+	hosts := []string{host + ":26379", host + ":26380"}
+
+	w := NewWorker(
+		WithAddr(strings.Join(hosts, ",")),
+		WithMasterName("mymaster"),
+		WithChannel("testSentinel"),
+		WithSentinel(true),
+		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
+			time.Sleep(500 * time.Millisecond)
+			return nil
+		}),
+	)
+	q := queue.NewPool(
+		5,
+		queue.WithWorker(w),
+	)
+	time.Sleep(100 * time.Millisecond)
+	assert.NoError(t, q.Queue(m))
+	assert.NoError(t, q.Queue(m))
+	assert.NoError(t, q.Queue(m))
+	assert.NoError(t, q.Queue(m))
+	time.Sleep(1000 * time.Millisecond)
+	q.Release()
+	// you will see the execute time > 1000ms
+}
+
 func TestEnqueueJobAfterShutdown(t *testing.T) {
 	m := mockMessage{
 		Message: "foo",
