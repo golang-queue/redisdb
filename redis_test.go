@@ -18,7 +18,10 @@ import (
 	"go.uber.org/goleak"
 )
 
-var host = "127.0.0.1"
+var (
+	host01 = "127.0.0.1:6379"
+	host02 = "127.0.0.1:6380"
+)
 
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
@@ -37,7 +40,7 @@ func TestRedisDefaultFlow(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host+":6379"),
+		WithAddr(host01),
 		WithChannel("test"),
 	)
 	q, err := queue.NewQueue(
@@ -56,7 +59,7 @@ func TestRedisDefaultFlow(t *testing.T) {
 
 func TestRedisShutdown(t *testing.T) {
 	w := NewWorker(
-		WithAddr(host+":6379"),
+		WithAddr(host01),
 		WithChannel("test2"),
 	)
 	q, err := queue.NewQueue(
@@ -78,7 +81,7 @@ func TestCustomFuncAndWait(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host+":6379"),
+		WithAddr(host01),
 		WithChannel("test3"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			time.Sleep(500 * time.Millisecond)
@@ -105,7 +108,7 @@ func TestRedisCluster(t *testing.T) {
 		Message: "foo",
 	}
 
-	hosts := []string{host + ":6379", host + ":6380"}
+	hosts := []string{host01, host02}
 
 	w := NewWorker(
 		WithAddr(strings.Join(hosts, ",")),
@@ -135,7 +138,7 @@ func TestRedisSentinel(t *testing.T) {
 	m := &mockMessage{
 		Message: "foo",
 	}
-	hosts := []string{host + ":26379", host + ":26380"}
+	hosts := []string{"127.0.0.1:26379", "127.0.0.1:26380"}
 
 	w := NewWorker(
 		WithAddr(strings.Join(hosts, ",")),
@@ -166,7 +169,7 @@ func TestEnqueueJobAfterShutdown(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host + ":6379"),
+		WithAddr(host01),
 	)
 	q, err := queue.NewQueue(
 		queue.WithWorker(w),
@@ -188,7 +191,7 @@ func TestJobReachTimeout(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host+":6379"),
+		WithAddr(host01),
 		WithChannel("timeout"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			for {
@@ -225,7 +228,7 @@ func TestCancelJobAfterShutdown(t *testing.T) {
 		Message: "test",
 	}
 	w := NewWorker(
-		WithAddr(host+":6379"),
+		WithAddr(host01),
 		WithChannel("cancel"),
 		WithLogger(queue.NewLogger()),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
@@ -263,7 +266,7 @@ func TestGoroutineLeak(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host+":6379"),
+		WithAddr(host01),
 		WithChannel("GoroutineLeak"),
 		WithLogger(queue.NewEmptyLogger()),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
@@ -308,7 +311,7 @@ func TestGoroutinePanic(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host+":6379"),
+		WithAddr(host01),
 		WithChannel("GoroutinePanic"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			panic("missing something")
