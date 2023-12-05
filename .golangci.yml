@@ -3,8 +3,6 @@ linters:
   disable-all: true
   fast: false
   enable:
-    - deadcode
-    - depguard
     - dogsled
     - dupl
     - errcheck
@@ -30,7 +28,6 @@ linters:
     - typecheck
     - unconvert
     - unused
-    - varcheck
     - whitespace
     - gofumpt
 

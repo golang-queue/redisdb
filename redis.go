@@ -29,7 +29,10 @@ type Worker struct {
 	opts     options
 }
 
-// NewWorker for struc
+// NewWorker creates a new Worker instance with the provided options.
+// It initializes a Redis client based on the options and establishes a connection to the Redis server.
+// The Worker is responsible for subscribing to a Redis channel and receiving messages from it.
+// It returns the created Worker instance.
 func NewWorker(opts ...Option) *Worker {
 	var err error
 	w := &Worker{
@@ -37,33 +40,35 @@ func NewWorker(opts ...Option) *Worker {
 		stop: make(chan struct{}),
 	}
 
+	options := &redis.Options{
+		Addr:     w.opts.addr,
+		Password: w.opts.password,
+		DB:       w.opts.db,
+	}
+	w.rdb = redis.NewClient(options)
+
 	if w.opts.connectionString != "" {
 		options, err := redis.ParseURL(w.opts.connectionString)
 		if err != nil {
 			w.opts.logger.Fatal(err)
 		}
 		w.rdb = redis.NewClient(options)
-	} else if w.opts.addr != "" {
-		if w.opts.cluster {
-			w.rdb = redis.NewClusterClient(&redis.ClusterOptions{
-				Addrs:    strings.Split(w.opts.addr, ","),
-				Password: w.opts.password,
-			})
-		} else if w.opts.sentinel {
-			w.rdb = redis.NewFailoverClient(&redis.FailoverOptions{
-				MasterName:    w.opts.masterName,
-				SentinelAddrs: strings.Split(w.opts.addr, ","),
-				Password:      w.opts.password,
-				DB:            w.opts.db,
-			})
-		} else {
-			options := &redis.Options{
-				Addr:     w.opts.addr,
-				Password: w.opts.password,
-				DB:       w.opts.db,
-			}
-			w.rdb = redis.NewClient(options)
-		}
+	}
+
+	if w.opts.cluster {
+		w.rdb = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:    strings.Split(w.opts.addr, ","),
+			Password: w.opts.password,
+		})
+	}
+
+	if w.opts.sentinel {
+		w.rdb = redis.NewFailoverClient(&redis.FailoverOptions{
+			MasterName:    w.opts.masterName,
+			SentinelAddrs: strings.Split(w.opts.addr, ","),
+			Password:      w.opts.password,
+			DB:            w.opts.db,
+		})
 	}
 
 	_, err = w.rdb.Ping(context.Background()).Result()
