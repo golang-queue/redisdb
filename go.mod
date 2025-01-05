@@ -1,6 +1,6 @@
 module github.com/golang-queue/redisdb
 
-go 1.18
+go 1.20
 
 require (
 	github.com/golang-queue/queue v0.1.4-0.20221210024521-cb8720b0c721
