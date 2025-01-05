@@ -16,6 +16,7 @@ type options struct {
 	addr             string
 	db               int
 	connectionString string
+	username         string
 	password         string
 	channelName      string
 	channelSize      int
@@ -63,6 +64,13 @@ func WithMasterName(masterName string) Option {
 func WithChannelSize(size int) Option {
 	return func(w *options) {
 		w.channelSize = size
+	}
+}
+
+// WithUsername redis username
+func WithUsername(username string) Option {
+	return func(w *options) {
+		w.username = username
 	}
 }
 
