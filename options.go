@@ -55,16 +55,12 @@ func WithSentinel(enable bool) Option {
 	}
 }
 
-// WithTLS is an option function that configures the Redis connection to use TLS.
-// It sets the ServerName to the address of the Redis server and enforces a minimum
-// TLS version of 1.2.
+// WithTLS returns an Option that configures the use of TLS for the connection.
+// It sets the minimum TLS version to TLS 1.2.
 func WithTLS() Option {
 	return func(w *options) {
 		w.tls = &tls.Config{
 			MinVersion: tls.VersionTLS12,
-		}
-		if w.addr != "" {
-			w.tls.ServerName = w.addr
 		}
 	}
 }
