@@ -2,6 +2,7 @@ package redisdb
 
 import (
 	"context"
+	"crypto/tls"
 
 	"github.com/golang-queue/queue"
 	"github.com/golang-queue/queue/core"
@@ -23,6 +24,7 @@ type options struct {
 	cluster          bool
 	sentinel         bool
 	masterName       string
+	tls              *tls.Config
 }
 
 // WithAddr setup the addr of redis
@@ -50,6 +52,38 @@ func WithCluster(enable bool) Option {
 func WithSentinel(enable bool) Option {
 	return func(w *options) {
 		w.sentinel = enable
+	}
+}
+
+// WithTLS is an option function that configures the Redis connection to use TLS.
+// It sets the ServerName to the address of the Redis server and enforces a minimum
+// TLS version of 1.2.
+func WithTLS() Option {
+	return func(w *options) {
+		w.tls = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+		if w.addr != "" {
+			w.tls.ServerName = w.addr
+		}
+	}
+}
+
+// WithSkipTLSVerify returns an Option that configures the TLS settings to skip
+// verification of the server's certificate. This is useful for connecting to
+// servers with self-signed certificates or when certificate verification is
+// not required. Use this option with caution as it makes the connection
+// susceptible to man-in-the-middle attacks.
+func WithSkipTLSVerify() Option {
+	return func(w *options) {
+		if w.tls == nil {
+			w.tls = &tls.Config{
+				InsecureSkipVerify: true, //nolint: gosec
+
+			}
+			return
+		}
+		w.tls.InsecureSkipVerify = true
 	}
 }
 
