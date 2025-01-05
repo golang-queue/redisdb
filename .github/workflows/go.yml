@@ -33,7 +33,7 @@ jobs:
       GOPROXY: https://proxy.golang.org
 
     steps:
-      - uses: vishnudxb/redis-cluster@1.0.5
+      - uses: vishnudxb/redis-cluster@1.0.9
         with:
           master1-port: 6379
           slave1-port: 6380
