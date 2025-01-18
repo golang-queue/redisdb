@@ -21,11 +21,6 @@ import (
 	"go.uber.org/goleak"
 )
 
-var (
-	host01 = "127.0.0.1:6379"
-	host02 = "127.0.0.1:6380"
-)
-
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
@@ -36,6 +31,33 @@ type mockMessage struct {
 
 func (m mockMessage) Bytes() []byte {
 	return []byte(m.Message)
+}
+
+func setupRedisCluserContainer(ctx context.Context, t *testing.T) (testcontainers.Container, string) {
+	req := testcontainers.ContainerRequest{
+		Image: "vishnunair/docker-redis-cluster:latest",
+		ExposedPorts: []string{
+			"6379/tcp",
+			"6380/tcp",
+			"6381/tcp",
+			"6382/tcp",
+			"6383/tcp",
+			"6384/tcp",
+		},
+		WaitingFor: wait.NewExecStrategy(
+			[]string{"redis-cli", "-h", "localhost", "-p", "6379", "cluster", "info"},
+		),
+	}
+	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	require.NoError(t, err)
+
+	endpoint, err := redisC.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	return redisC, endpoint
 }
 
 func setupRedisContainer(ctx context.Context, t *testing.T) (testcontainers.Container, string) {
@@ -145,17 +167,26 @@ func TestRedisCluster(t *testing.T) {
 	t.Helper()
 
 	ctx := context.Background()
-	redisC01, endpoint01 := setupRedisContainer(ctx, t)
-	defer testcontainers.CleanupContainer(t, redisC01)
+	redisC, _ := setupRedisCluserContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
 
-	redisC02, endpoint02 := setupRedisContainer(ctx, t)
-	defer testcontainers.CleanupContainer(t, redisC02)
+	masterPort, err := redisC.MappedPort(ctx, "6379")
+	assert.NoError(t, err)
+
+	slavePort, err := redisC.MappedPort(ctx, "6382")
+	assert.NoError(t, err)
+
+	hostIP, err := redisC.Host(ctx)
+	assert.NoError(t, err)
 
 	m := &mockMessage{
 		Message: "foo",
 	}
 
-	hosts := []string{endpoint01, endpoint02}
+	masterName := fmt.Sprintf("%s:%s", hostIP, masterPort.Port())
+	slaveName := fmt.Sprintf("%s:%s", hostIP, slavePort.Port())
+
+	hosts := []string{masterName, slaveName}
 
 	w := NewWorker(
 		WithAddr(strings.Join(hosts, ",")),
