@@ -13,6 +13,7 @@ import (
 	"github.com/golang-queue/queue/job"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/yassinebenaid/godump"
 )
 
 var _ core.Worker = (*Worker)(nil)
@@ -38,6 +39,10 @@ func NewWorker(opts ...Option) *Worker {
 	w := &Worker{
 		opts: newOptions(opts...),
 		stop: make(chan struct{}),
+	}
+
+	if w.opts.debug {
+		godump.Dump(w.opts)
 	}
 
 	options := &redis.Options{

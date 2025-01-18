@@ -7,6 +7,7 @@ require (
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.35.0
+	github.com/yassinebenaid/godump v0.11.1
 	go.uber.org/goleak v1.3.0
 )
 

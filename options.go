@@ -25,6 +25,7 @@ type options struct {
 	sentinel         bool
 	masterName       string
 	tls              *tls.Config
+	debug            bool
 }
 
 // WithAddr setup the addr of redis

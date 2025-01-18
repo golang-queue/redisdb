@@ -89,8 +89,12 @@ func TestRedisDefaultFlow(t *testing.T) {
 }
 
 func TestRedisShutdown(t *testing.T) {
+	ctx := context.Background()
+	redisC, endpoint := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
+
 	w := NewWorker(
-		WithAddr(host01),
+		WithConnectionString(endpoint),
 		WithChannel("test2"),
 	)
 	q, err := queue.NewQueue(
@@ -108,11 +112,14 @@ func TestRedisShutdown(t *testing.T) {
 }
 
 func TestCustomFuncAndWait(t *testing.T) {
+	ctx := context.Background()
+	redisC, endpoint := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
 	m := &mockMessage{
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host01),
+		WithConnectionString(endpoint),
 		WithChannel("test3"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			time.Sleep(500 * time.Millisecond)
@@ -196,11 +203,14 @@ func TestRedisSentinel(t *testing.T) {
 }
 
 func TestEnqueueJobAfterShutdown(t *testing.T) {
+	ctx := context.Background()
+	redisC, endpoint := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host01),
+		WithConnectionString(endpoint),
 	)
 	q, err := queue.NewQueue(
 		queue.WithWorker(w),
@@ -218,11 +228,14 @@ func TestEnqueueJobAfterShutdown(t *testing.T) {
 }
 
 func TestJobReachTimeout(t *testing.T) {
+	ctx := context.Background()
+	redisC, endpoint := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host01),
+		WithConnectionString(endpoint),
 		WithChannel("timeout"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			for {
@@ -255,11 +268,14 @@ func TestJobReachTimeout(t *testing.T) {
 }
 
 func TestCancelJobAfterShutdown(t *testing.T) {
+	ctx := context.Background()
+	redisC, endpoint := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
 		Message: "test",
 	}
 	w := NewWorker(
-		WithAddr(host01),
+		WithConnectionString(endpoint),
 		WithChannel("cancel"),
 		WithLogger(queue.NewLogger()),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
@@ -293,11 +309,14 @@ func TestCancelJobAfterShutdown(t *testing.T) {
 }
 
 func TestGoroutineLeak(t *testing.T) {
+	ctx := context.Background()
+	redisC, endpoint := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host01),
+		WithConnectionString(endpoint),
 		WithChannel("GoroutineLeak"),
 		WithLogger(queue.NewEmptyLogger()),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
@@ -338,11 +357,14 @@ func TestGoroutineLeak(t *testing.T) {
 }
 
 func TestGoroutinePanic(t *testing.T) {
+	ctx := context.Background()
+	redisC, endpoint := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host01),
+		WithConnectionString(endpoint),
 		WithChannel("GoroutinePanic"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			panic("missing something")
