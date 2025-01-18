@@ -71,7 +71,7 @@ func TestRedisDefaultFlow(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithConnectionString(endpoint),
+		WithAddr(endpoint),
 		WithChannel("test"),
 		WithDebug(),
 	)
