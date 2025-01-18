@@ -97,7 +97,9 @@ func setupRedisContainer(ctx context.Context, t *testing.T) (testcontainers.Cont
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:6",
 		ExposedPorts: []string{"6379/tcp"},
-		WaitingFor:   wait.ForLog("Ready to accept connections"),
+		WaitingFor: wait.NewExecStrategy(
+			[]string{"redis-cli", "-h", "localhost", "-p", "6379", "ping"},
+		),
 	}
 	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
