@@ -42,7 +42,7 @@ func NewWorker(opts ...Option) *Worker {
 	}
 
 	if w.opts.debug {
-		godump.Dump(w.opts)
+		_ = godump.Dump(w.opts)
 	}
 
 	options := &redis.Options{

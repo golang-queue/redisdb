@@ -149,7 +149,6 @@ func WithDebug() Option {
 
 func newOptions(opts ...Option) options {
 	defaultOpts := options{
-		addr:        "127.0.0.1:6379",
 		channelName: "queue",
 		// default channel size in go-redis package
 		channelSize: 100,
