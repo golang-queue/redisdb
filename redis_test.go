@@ -226,7 +226,7 @@ func TestRedisCluster(t *testing.T) {
 	w := NewWorker(
 		WithAddr(strings.Join(hosts, ",")),
 		WithChannel("testCluster"),
-		WithCluster(true),
+		WithCluster(),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			time.Sleep(500 * time.Millisecond)
 			return nil
@@ -280,7 +280,7 @@ func TestRedisSentinel(t *testing.T) {
 		WithAddr(strings.Join(hosts, ",")),
 		WithMasterName("mymaster"),
 		WithChannel("testSentinel"),
-		WithSentinel(true),
+		WithSentinel(),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			time.Sleep(500 * time.Millisecond)
 			return nil

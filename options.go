@@ -43,16 +43,16 @@ func WithDB(db int) Option {
 }
 
 // WithCluster redis cluster
-func WithCluster(enable bool) Option {
+func WithCluster() Option {
 	return func(w *options) {
-		w.cluster = enable
+		w.cluster = true
 	}
 }
 
 // WithSentinel redis sentinel
-func WithSentinel(enable bool) Option {
+func WithSentinel() Option {
 	return func(w *options) {
-		w.sentinel = enable
+		w.sentinel = true
 	}
 }
 
