@@ -15,6 +15,9 @@ import (
 	"github.com/golang-queue/queue/job"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/goleak"
 )
 
@@ -33,6 +36,21 @@ type mockMessage struct {
 
 func (m mockMessage) Bytes() []byte {
 	return []byte(m.Message)
+}
+
+func TestWithRedis(t *testing.T) {
+	ctx := context.Background()
+	req := testcontainers.ContainerRequest{
+		Image:        "redis:6",
+		ExposedPorts: []string{"6379/tcp"},
+		WaitingFor:   wait.ForLog("Ready to accept connections"),
+	}
+	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	testcontainers.CleanupContainer(t, redisC)
+	require.NoError(t, err)
 }
 
 func TestRedisDefaultFlow(t *testing.T) {
