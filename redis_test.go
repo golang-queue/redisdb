@@ -143,11 +143,19 @@ func TestCustomFuncAndWait(t *testing.T) {
 
 func TestRedisCluster(t *testing.T) {
 	t.Helper()
+
+	ctx := context.Background()
+	redisC01, endpoint01 := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC01)
+
+	redisC02, endpoint02 := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC02)
+
 	m := &mockMessage{
 		Message: "foo",
 	}
 
-	hosts := []string{host01, host02}
+	hosts := []string{endpoint01, endpoint02}
 
 	w := NewWorker(
 		WithAddr(strings.Join(hosts, ",")),
