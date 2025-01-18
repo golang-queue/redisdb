@@ -28,16 +28,8 @@ jobs:
             go-build: ~/.cache/go-build
     name: ${{ matrix.os }} @ Go ${{ matrix.go }}
     runs-on: ${{ matrix.os }}
-    env:
-      GO111MODULE: on
-      GOPROXY: https://proxy.golang.org
 
     steps:
-      - uses: vishnudxb/redis-cluster@1.0.9
-        with:
-          master1-port: 6379
-          slave1-port: 6380
-
       - name: Set up Go ${{ matrix.go }}
         uses: actions/setup-go@v5
         with:
