@@ -73,6 +73,7 @@ func TestRedisDefaultFlow(t *testing.T) {
 	w := NewWorker(
 		WithConnectionString(endpoint),
 		WithChannel("test"),
+		WithDebug(),
 	)
 	q, err := queue.NewQueue(
 		queue.WithWorker(w),

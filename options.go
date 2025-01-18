@@ -140,6 +140,13 @@ func WithLogger(l queue.Logger) Option {
 	}
 }
 
+// WithDebug set debug mode
+func WithDebug() Option {
+	return func(w *options) {
+		w.debug = true
+	}
+}
+
 func newOptions(opts ...Option) options {
 	defaultOpts := options{
 		addr:        "127.0.0.1:6379",
