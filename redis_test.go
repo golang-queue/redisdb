@@ -38,23 +38,7 @@ func (m mockMessage) Bytes() []byte {
 	return []byte(m.Message)
 }
 
-func TestWithRedis(t *testing.T) {
-	ctx := context.Background()
-	req := testcontainers.ContainerRequest{
-		Image:        "redis:6",
-		ExposedPorts: []string{"6379/tcp"},
-		WaitingFor:   wait.ForLog("Ready to accept connections"),
-	}
-	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	testcontainers.CleanupContainer(t, redisC)
-	require.NoError(t, err)
-}
-
-func TestRedisDefaultFlow(t *testing.T) {
-	ctx := context.Background()
+func setupRedisContainer(ctx context.Context, t *testing.T) (testcontainers.Container, string) {
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:6",
 		ExposedPorts: []string{"6379/tcp"},
@@ -68,6 +52,20 @@ func TestRedisDefaultFlow(t *testing.T) {
 
 	endpoint, err := redisC.Endpoint(ctx, "")
 	require.NoError(t, err)
+
+	return redisC, endpoint
+}
+
+func TestWithRedis(t *testing.T) {
+	ctx := context.Background()
+	redisC, _ := setupRedisContainer(ctx, t)
+	testcontainers.CleanupContainer(t, redisC)
+}
+
+func TestRedisDefaultFlow(t *testing.T) {
+	ctx := context.Background()
+	redisC, endpoint := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
 
 	m := &mockMessage{
 		Message: "foo",
