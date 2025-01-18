@@ -95,7 +95,7 @@ func TestRedisShutdown(t *testing.T) {
 	defer testcontainers.CleanupContainer(t, redisC)
 
 	w := NewWorker(
-		WithConnectionString(endpoint),
+		WithAddr(endpoint),
 		WithChannel("test2"),
 	)
 	q, err := queue.NewQueue(
@@ -120,7 +120,7 @@ func TestCustomFuncAndWait(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithConnectionString(endpoint),
+		WithAddr(endpoint),
 		WithChannel("test3"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			time.Sleep(500 * time.Millisecond)
@@ -211,7 +211,7 @@ func TestEnqueueJobAfterShutdown(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithConnectionString(endpoint),
+		WithAddr(endpoint),
 	)
 	q, err := queue.NewQueue(
 		queue.WithWorker(w),
@@ -236,7 +236,7 @@ func TestJobReachTimeout(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithConnectionString(endpoint),
+		WithAddr(endpoint),
 		WithChannel("timeout"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			for {
@@ -276,7 +276,7 @@ func TestCancelJobAfterShutdown(t *testing.T) {
 		Message: "test",
 	}
 	w := NewWorker(
-		WithConnectionString(endpoint),
+		WithAddr(endpoint),
 		WithChannel("cancel"),
 		WithLogger(queue.NewLogger()),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
@@ -317,7 +317,7 @@ func TestGoroutineLeak(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithConnectionString(endpoint),
+		WithAddr(endpoint),
 		WithChannel("GoroutineLeak"),
 		WithLogger(queue.NewEmptyLogger()),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
@@ -365,7 +365,7 @@ func TestGoroutinePanic(t *testing.T) {
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithConnectionString(endpoint),
+		WithAddr(endpoint),
 		WithChannel("GoroutinePanic"),
 		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
 			panic("missing something")
