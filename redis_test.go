@@ -33,6 +33,39 @@ func (m mockMessage) Bytes() []byte {
 	return []byte(m.Message)
 }
 
+func setupRedisSentinelContainer(
+	ctx context.Context,
+	t *testing.T,
+	masterHost string,
+	masterPort string,
+) (testcontainers.Container, string) {
+	req := testcontainers.ContainerRequest{
+		Image: "bitnami/redis-sentinel:7.4-debian-12",
+		ExposedPorts: []string{
+			"26379/tcp",
+		},
+		WaitingFor: wait.NewExecStrategy(
+			[]string{"redis-cli", "-h", "localhost", "-p", "26379", "ping"},
+		),
+		Env: map[string]string{
+			"REDIS_MASTER_HOST":        masterHost,
+			"REDIS_MASTER_PORT_NUMBER": masterPort,
+			"REDIS_MASTER_SET":         "mymaster",
+			"REDIS_SENTINEL_QUORUM":    "1",
+		},
+	}
+	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	require.NoError(t, err)
+
+	endpoint, err := redisC.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	return redisC, endpoint
+}
+
 func setupRedisCluserContainer(ctx context.Context, t *testing.T) (testcontainers.Container, string) {
 	req := testcontainers.ContainerRequest{
 		Image: "vishnunair/docker-redis-cluster:latest",
@@ -213,10 +246,33 @@ func TestRedisCluster(t *testing.T) {
 
 func TestRedisSentinel(t *testing.T) {
 	t.Helper()
+
+	ctx := context.Background()
+
+	// create redis master
+	redisC, _ := setupRedisContainer(ctx, t)
+	defer testcontainers.CleanupContainer(t, redisC)
+	masterPort, err := redisC.MappedPort(ctx, "6379")
+	assert.NoError(t, err)
+	masterHost, err := redisC.Host(ctx)
+	assert.NoError(t, err)
+
+	sentinelC, _ := setupRedisSentinelContainer(ctx, t, masterHost, masterPort.Port())
+	defer testcontainers.CleanupContainer(t, sentinelC)
+
+	sentinelPort, err := sentinelC.MappedPort(ctx, "26379")
+	assert.NoError(t, err)
+
+	sentinelHost, err := sentinelC.Host(ctx)
+	assert.NoError(t, err)
+
 	m := &mockMessage{
 		Message: "foo",
 	}
-	hosts := []string{"127.0.0.1:26379", "127.0.0.1:26380"}
+
+	masterName := fmt.Sprintf("%s:%s", sentinelHost, sentinelPort.Port())
+
+	hosts := []string{masterName}
 
 	w := NewWorker(
 		WithAddr(strings.Join(hosts, ",")),
