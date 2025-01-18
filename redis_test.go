@@ -54,11 +54,26 @@ func TestWithRedis(t *testing.T) {
 }
 
 func TestRedisDefaultFlow(t *testing.T) {
+	ctx := context.Background()
+	req := testcontainers.ContainerRequest{
+		Image:        "redis:6",
+		ExposedPorts: []string{"6379/tcp"},
+		WaitingFor:   wait.ForLog("Ready to accept connections"),
+	}
+	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	require.NoError(t, err)
+
+	endpoint, err := redisC.Endpoint(ctx, "")
+	require.NoError(t, err)
+
 	m := &mockMessage{
 		Message: "foo",
 	}
 	w := NewWorker(
-		WithAddr(host01),
+		WithConnectionString(endpoint),
 		WithChannel("test"),
 	)
 	q, err := queue.NewQueue(
