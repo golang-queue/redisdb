@@ -25,19 +25,17 @@ func (j *job) Bytes() []byte {
 }
 
 func main() {
-	taskN := 100
+	taskN := 50
 	rets := make(chan string, taskN)
 
 	// define the worker
 	w := redisdb.NewWorker(
-		redisdb.WithAddr("127.0.0.1:6379"),
+		redisdb.WithAddr("127.0.0.1:6380"),
 		redisdb.WithChannel("foobar"),
-		redisdb.WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
-			v, ok := m.(*job)
-			if !ok {
-				if err := json.Unmarshal(m.Bytes(), &v); err != nil {
-					return err
-				}
+		redisdb.WithRunFunc(func(ctx context.Context, m core.TaskMessage) error {
+			var v job
+			if err := json.Unmarshal(m.Payload(), &v); err != nil {
+				return err
 			}
 
 			rets <- v.Message
