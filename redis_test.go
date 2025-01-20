@@ -179,7 +179,7 @@ func TestCustomFuncAndWait(t *testing.T) {
 	w := NewWorker(
 		WithAddr(endpoint),
 		WithChannel("test3"),
-		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
+		WithRunFunc(func(ctx context.Context, m core.TaskMessage) error {
 			time.Sleep(500 * time.Millisecond)
 			return nil
 		}),
@@ -227,7 +227,7 @@ func TestRedisCluster(t *testing.T) {
 		WithAddr(strings.Join(hosts, ",")),
 		WithChannel("testCluster"),
 		WithCluster(),
-		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
+		WithRunFunc(func(ctx context.Context, m core.TaskMessage) error {
 			time.Sleep(500 * time.Millisecond)
 			return nil
 		}),
@@ -281,7 +281,7 @@ func TestRedisSentinel(t *testing.T) {
 		WithMasterName("mymaster"),
 		WithChannel("testSentinel"),
 		WithSentinel(),
-		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
+		WithRunFunc(func(ctx context.Context, m core.TaskMessage) error {
 			time.Sleep(500 * time.Millisecond)
 			return nil
 		}),
@@ -335,7 +335,7 @@ func TestJobReachTimeout(t *testing.T) {
 	w := NewWorker(
 		WithAddr(endpoint),
 		WithChannel("timeout"),
-		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
+		WithRunFunc(func(ctx context.Context, m core.TaskMessage) error {
 			for {
 				select {
 				case <-ctx.Done():
@@ -378,7 +378,7 @@ func TestCancelJobAfterShutdown(t *testing.T) {
 		WithAddr(endpoint),
 		WithChannel("cancel"),
 		WithLogger(queue.NewLogger()),
-		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
+		WithRunFunc(func(ctx context.Context, m core.TaskMessage) error {
 			for {
 				select {
 				case <-ctx.Done():
@@ -421,7 +421,7 @@ func TestGoroutineLeak(t *testing.T) {
 		WithAddr(endpoint),
 		WithChannel("GoroutineLeak"),
 		WithLogger(queue.NewEmptyLogger()),
-		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
+		WithRunFunc(func(ctx context.Context, m core.TaskMessage) error {
 			for {
 				select {
 				case <-ctx.Done():
@@ -468,7 +468,7 @@ func TestGoroutinePanic(t *testing.T) {
 	w := NewWorker(
 		WithAddr(endpoint),
 		WithChannel("GoroutinePanic"),
-		WithRunFunc(func(ctx context.Context, m core.QueuedMessage) error {
+		WithRunFunc(func(ctx context.Context, m core.TaskMessage) error {
 			panic("missing something")
 		}),
 	)

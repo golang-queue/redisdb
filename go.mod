@@ -3,7 +3,7 @@ module github.com/golang-queue/redisdb
 go 1.22
 
 require (
-	github.com/golang-queue/queue v0.2.2-0.20250119152159-18502599f7a6
+	github.com/golang-queue/queue v0.3.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.35.0

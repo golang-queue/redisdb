@@ -112,7 +112,7 @@ func NewWorker(opts ...Option) *Worker {
 }
 
 // Run to execute new task
-func (w *Worker) Run(ctx context.Context, task core.QueuedMessage) error {
+func (w *Worker) Run(ctx context.Context, task core.TaskMessage) error {
 	return w.opts.runFunc(ctx, task)
 }
 
@@ -136,7 +136,7 @@ func (w *Worker) Shutdown() error {
 }
 
 // Queue send notification to queue
-func (w *Worker) Queue(job core.QueuedMessage) error {
+func (w *Worker) Queue(job core.TaskMessage) error {
 	if atomic.LoadInt32(&w.stopFlag) == 1 {
 		return queue.ErrQueueShutdown
 	}
@@ -153,7 +153,7 @@ func (w *Worker) Queue(job core.QueuedMessage) error {
 }
 
 // Request a new task
-func (w *Worker) Request() (core.QueuedMessage, error) {
+func (w *Worker) Request() (core.TaskMessage, error) {
 	clock := 0
 loop:
 	for {
@@ -163,7 +163,10 @@ loop:
 				return nil, queue.ErrQueueHasBeenClosed
 			}
 			var data job.Message
-			_ = json.Unmarshal([]byte(task.Payload), &data)
+			err := json.Unmarshal([]byte(task.Payload), &data)
+			if err != nil {
+				return nil, err
+			}
 			return &data, nil
 		case <-time.After(1 * time.Second):
 			if clock == 5 {

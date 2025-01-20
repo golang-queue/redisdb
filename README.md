@@ -63,7 +63,7 @@ func main() {
   w := redisdb.NewWorker(
     redisdb.WithAddr("127.0.0.1:6379"),
     redisdb.WithChannel("foobar"),
-    redisdb.WithRunFunc(func(ctx context.Context, m queue.QueuedMessage) error {
+    redisdb.WithRunFunc(func(ctx context.Context, m queue.TaskMessage) error {
       v, ok := m.(*job)
       if !ok {
         if err := json.Unmarshal(m.Bytes(), &v); err != nil {
