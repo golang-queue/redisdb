@@ -64,11 +64,9 @@ func main() {
     redisdb.WithAddr("127.0.0.1:6379"),
     redisdb.WithChannel("foobar"),
     redisdb.WithRunFunc(func(ctx context.Context, m queue.TaskMessage) error {
-      v, ok := m.(*job)
-      if !ok {
-        if err := json.Unmarshal(m.Bytes(), &v); err != nil {
-          return err
-        }
+      var v job
+      if err := json.Unmarshal(m.Payload(), &v); err != nil {
+        return err
       }
 
       rets <- v.Message
