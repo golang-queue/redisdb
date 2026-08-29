@@ -24,7 +24,7 @@ type Worker struct {
 	rdb      redis.Cmdable
 	pubsub   *redis.PubSub
 	channel  <-chan *redis.Message
-	stopFlag int32
+	stopFlag atomic.Int32
 	stopOnce sync.Once
 	stop     chan struct{}
 	opts     options
@@ -118,7 +118,7 @@ func (w *Worker) Run(ctx context.Context, task core.TaskMessage) error {
 
 // Shutdown worker
 func (w *Worker) Shutdown() error {
-	if !atomic.CompareAndSwapInt32(&w.stopFlag, 0, 1) {
+	if !w.stopFlag.CompareAndSwap(0, 1) {
 		return queue.ErrQueueShutdown
 	}
 
@@ -137,7 +137,7 @@ func (w *Worker) Shutdown() error {
 
 // Queue send notification to queue
 func (w *Worker) Queue(job core.TaskMessage) error {
-	if atomic.LoadInt32(&w.stopFlag) == 1 {
+	if w.stopFlag.Load() == 1 {
 		return queue.ErrQueueShutdown
 	}
 
@@ -172,7 +172,7 @@ loop:
 			if clock == 5 {
 				break loop
 			}
-			clock += 1
+			clock++
 		}
 	}
 
