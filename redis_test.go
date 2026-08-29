@@ -21,6 +21,8 @@ import (
 	"go.uber.org/goleak"
 )
 
+const testMessage = "foo"
+
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
@@ -129,7 +131,7 @@ func TestRedisDefaultFlow(t *testing.T) {
 	defer testcontainers.CleanupContainer(t, redisC)
 
 	m := &mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -178,7 +180,7 @@ func TestCustomFuncAndWait(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := &mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -219,7 +221,7 @@ func TestRedisCluster(t *testing.T) {
 	assert.NoError(t, err)
 
 	m := &mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 
 	masterName := fmt.Sprintf("%s:%s", hostIP, masterPort.Port())
@@ -273,7 +275,7 @@ func TestRedisSentinel(t *testing.T) {
 	assert.NoError(t, err)
 
 	m := &mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 
 	masterName := fmt.Sprintf("%s:%s", sentinelHost, sentinelPort.Port())
@@ -309,7 +311,7 @@ func TestEnqueueJobAfterShutdown(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -334,7 +336,7 @@ func TestJobReachTimeout(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -419,7 +421,7 @@ func TestGoroutineLeak(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -467,7 +469,7 @@ func TestGoroutinePanic(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
