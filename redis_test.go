@@ -21,8 +21,12 @@ import (
 	"go.uber.org/goleak"
 )
 
+const testMessage = "foo"
+
 func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
+	goleak.VerifyTestMain(m,
+		goleak.IgnoreTopFunction("github.com/redis/go-redis/v9/maintnotifications.(*CircuitBreakerManager).cleanupLoop"),
+	)
 }
 
 type mockMessage struct {
@@ -44,7 +48,7 @@ func setupRedisSentinelContainer(
 	masterPort string,
 ) (testcontainers.Container, string) {
 	req := testcontainers.ContainerRequest{
-		Image: "bitnami/redis-sentinel:7.4-debian-12",
+		Image: "bitnami/redis-sentinel:latest",
 		ExposedPorts: []string{
 			"26379/tcp",
 		},
@@ -52,6 +56,7 @@ func setupRedisSentinelContainer(
 			[]string{"redis-cli", "-h", "localhost", "-p", "26379", "ping"},
 		),
 		Env: map[string]string{
+			"ALLOW_EMPTY_PASSWORD":     "yes",
 			"REDIS_MASTER_HOST":        masterHost,
 			"REDIS_MASTER_PORT_NUMBER": masterPort,
 			"REDIS_MASTER_SET":         "mymaster",
@@ -82,7 +87,7 @@ func setupRedisCluserContainer(ctx context.Context, t *testing.T) (testcontainer
 			"6384/tcp",
 		},
 		WaitingFor: wait.NewExecStrategy(
-			[]string{"redis-cli", "-h", "localhost", "-p", "6379", "cluster", "info"},
+			[]string{"sh", "-c", "redis-cli -h localhost -p 6379 cluster info | grep -q cluster_state:ok"},
 		),
 	}
 	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -129,7 +134,7 @@ func TestRedisDefaultFlow(t *testing.T) {
 	defer testcontainers.CleanupContainer(t, redisC)
 
 	m := &mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -178,7 +183,7 @@ func TestCustomFuncAndWait(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := &mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -219,7 +224,7 @@ func TestRedisCluster(t *testing.T) {
 	assert.NoError(t, err)
 
 	m := &mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 
 	masterName := fmt.Sprintf("%s:%s", hostIP, masterPort.Port())
@@ -273,7 +278,7 @@ func TestRedisSentinel(t *testing.T) {
 	assert.NoError(t, err)
 
 	m := &mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 
 	masterName := fmt.Sprintf("%s:%s", sentinelHost, sentinelPort.Port())
@@ -309,7 +314,7 @@ func TestEnqueueJobAfterShutdown(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -334,7 +339,7 @@ func TestJobReachTimeout(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -419,7 +424,7 @@ func TestGoroutineLeak(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
@@ -467,7 +472,7 @@ func TestGoroutinePanic(t *testing.T) {
 	redisC, endpoint := setupRedisContainer(ctx, t)
 	defer testcontainers.CleanupContainer(t, redisC)
 	m := mockMessage{
-		Message: "foo",
+		Message: testMessage,
 	}
 	w := NewWorker(
 		WithAddr(endpoint),
