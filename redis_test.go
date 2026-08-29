@@ -44,7 +44,7 @@ func setupRedisSentinelContainer(
 	masterPort string,
 ) (testcontainers.Container, string) {
 	req := testcontainers.ContainerRequest{
-		Image: "bitnami/redis-sentinel:7.4-debian-12",
+		Image: "bitnami/redis-sentinel:latest",
 		ExposedPorts: []string{
 			"26379/tcp",
 		},
@@ -82,7 +82,7 @@ func setupRedisCluserContainer(ctx context.Context, t *testing.T) (testcontainer
 			"6384/tcp",
 		},
 		WaitingFor: wait.NewExecStrategy(
-			[]string{"redis-cli", "-h", "localhost", "-p", "6379", "cluster", "info"},
+			[]string{"sh", "-c", "redis-cli -h localhost -p 6379 cluster info | grep -q cluster_state:ok"},
 		),
 	}
 	redisC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
