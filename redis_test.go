@@ -54,6 +54,7 @@ func setupRedisSentinelContainer(
 			[]string{"redis-cli", "-h", "localhost", "-p", "26379", "ping"},
 		),
 		Env: map[string]string{
+			"ALLOW_EMPTY_PASSWORD":     "yes",
 			"REDIS_MASTER_HOST":        masterHost,
 			"REDIS_MASTER_PORT_NUMBER": masterPort,
 			"REDIS_MASTER_SET":         "mymaster",
