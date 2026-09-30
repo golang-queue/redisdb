@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang-queue/redisdb"
+
 	"github.com/appleboy/graceful"
 	"github.com/golang-queue/queue"
 	"github.com/golang-queue/queue/core"
-	"github.com/golang-queue/redisdb"
 )
 
 type job struct {

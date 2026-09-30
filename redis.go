@@ -11,7 +11,6 @@ import (
 	"github.com/golang-queue/queue"
 	"github.com/golang-queue/queue/core"
 	"github.com/golang-queue/queue/job"
-
 	"github.com/redis/go-redis/v9"
 	"github.com/yassinebenaid/godump"
 )
